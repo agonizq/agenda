@@ -1,14 +1,9 @@
 const mongoose = require('mongoose')
 
-if (process.argv.length < 3) {
-    console.log('give password as argument')
-    process.exit(1)
-}
-
 const password = process.argv[2]
 
 const url =
-    `mongodb+srv://fullstack:${password}@cluster0.o1opl.mongodb.net/agenda?retryWrites=true&w=majority`
+    `mongodb+srv://alicia892:${password}@cluster0.nbbjtdl.mongodb.net/agenda?retryWrites=true&w=majority&appName=Cluster0`
 
 mongoose.set('strictQuery', false)
 
@@ -21,19 +16,29 @@ const personSchema = new mongoose.Schema({
 
 const Person = mongoose.model('Person', personSchema)
 
-const person = new Person({
-    name: 'Pepita de los palotes',
-    number: '3434-4545',
-})
+if (process.argv.length === 3) {
+    console.log('phonebook:');
 
-/* note.save().then(result => {
-    console.log('note saved!')
-    mongoose.connection.close()
-}) */
-
-Person.find({}).then(result => {
-    result.forEach(person => {
-        console.log(person)
+    Person.find({}).then(result => {
+        result.forEach(person => {
+            console.log(`${person.name} ${person.number}`)
+        })
+        mongoose.connection.close()
     })
-    mongoose.connection.close()
-})
+}
+
+if (process.argv.length === 5) {
+    const name = process.argv[3]
+    const number = process.argv[4]
+
+    const person = new Person({
+        name: name,
+        number: number,
+    })
+
+    person.save().then(result => {
+        console.log(`added ${name} number ${number} to phonebook`)
+        mongoose.connection.close()
+    })
+}
+
