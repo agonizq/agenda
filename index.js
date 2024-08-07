@@ -8,13 +8,16 @@ morgan.token('body', (request, response) => JSON.stringify(request.body))
 const app = express()
 const cors = require('cors')
 
-let persons = [
-]
-
 let personsCount = 0
 
-const generateId = () => {
-    return Math.floor(Math.random() * 100);
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' })
+    }
+
+    next(error)
 }
 
 app.use(express.static('dist'))
@@ -37,16 +40,23 @@ app.get('/info', (request, response) => {
     response.send(`<p>Phonebook has infor for ${personsCount} people</p><p>${new Date()}</p>`)
 })
 
-app.get(`/api/persons/:id`, (request, response) => {
+app.get(`/api/persons/:id`, (request, response, next) => {
     Person.findById(request.params.id).then(person => {
-        response.json(person)
+        if (person) {
+            response.json(person)
+        } else {
+            response.status(404).end()
+        }
     })
+        .catch(error => next(error))
 })
 
-app.delete(`/api/persons/:id`, (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(person => person.id !== id)
-    response.json(persons)
+app.delete(`/api/persons/:id`, (request, response, next) => {
+    Person.findByIdAndDelete(request.params.id)
+        .then(result => {
+            response.status(204).end()
+        })
+        .catch(error => next(error))
 })
 
 app.post('/api/persons', (request, response) => {
@@ -58,12 +68,6 @@ app.post('/api/persons', (request, response) => {
         })
     }
 
-    /* if (exist) {
-        return response.status(400).json({
-            error: 'name must be unique'
-        })
-    } */
-
     const person = new Person({
         ...request.body
     })
@@ -71,9 +75,25 @@ app.post('/api/persons', (request, response) => {
     person.save().then(savedPerson => {
         response.json(savedPerson)
     })
-    //persons = persons.concat(person)
 
 })
+
+app.put(`/api/persons/:id`, (request, response, next) => {
+    const body = request.body
+
+    const person = {
+        ...request.body
+    }
+
+    Person.findByIdAndUpdate(request.params.id, person, { new: true })
+        .then(updatedPerson => {
+            response.json(updatedPerson)
+        })
+        .catch(error => next(error))
+
+})
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {
