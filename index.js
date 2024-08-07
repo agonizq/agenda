@@ -15,6 +15,19 @@ const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
         return response.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+
+        let messages = {};
+        for (let field in error.errors) {
+            if (field === 'name') {
+                messages[field] = 'Name must be at least 3 characters long.';
+            } else if (field === 'number') {
+                messages[field] = 'Number must be in the format XX-XXX or XXX-XXXX.';
+            } else {
+                messages[field] = error.errors[field].message;
+            }
+        }
+        return response.status(400).json({ errors: messages })
     }
 
     next(error)
@@ -59,14 +72,7 @@ app.delete(`/api/persons/:id`, (request, response, next) => {
         .catch(error => next(error))
 })
 
-app.post('/api/persons', (request, response) => {
-    const body = request.body
-
-    if (!body.name || !body.number) {
-        return response.status(400).json({
-            error: 'content missing'
-        })
-    }
+app.post('/api/persons', (request, response, next) => {
 
     const person = new Person({
         ...request.body
@@ -74,7 +80,7 @@ app.post('/api/persons', (request, response) => {
 
     person.save().then(savedPerson => {
         response.json(savedPerson)
-    })
+    }).catch(error => next(error))
 
 })
 
